@@ -1,3 +1,9 @@
 <resources>
-    <string name="app_name">YandexPreSchoolTask</string>
+    <string name="app_name" translatable="false">YandexPreSchoolTask</string>
+    <string name="search">Search</string>
+    <string name="clear_search">Clear Search</string>
+    <string name="about">About</string>
+    <string name="about_author">Made by Maxim Ovchinnikov</string>
+    <string name="contact_me">You can contact me at:</string>
+    <string name="email" translatable="false">maxim.ovchinnikov97@gmail.com</string>
 </resources>
