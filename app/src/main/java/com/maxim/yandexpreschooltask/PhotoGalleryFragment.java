@@ -14,13 +14,14 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.ViewTreeObserver;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
+import com.maxim.yandexpreschooltask.activities.AboutActivity;
+import com.maxim.yandexpreschooltask.activities.FullImageActivity;
 import com.maxim.yandexpreschooltask.api.FetchRecentPhotos;
 import com.maxim.yandexpreschooltask.api.SearchPhotos;
 import com.maxim.yandexpreschooltask.entities.GalleryItem;
@@ -38,7 +39,7 @@ import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
-public class PhotoGalleryFragment extends Fragment {
+public class PhotoGalleryFragment extends Fragment implements OnPhotoClickListener{
 
     private static final String TAG = "mytaglol";
 
@@ -50,6 +51,8 @@ public class PhotoGalleryFragment extends Fragment {
     private static final int SAFESEARCH = 1;
     private static final String EXTRAS = "url_n,url_o";
     private static final String SORTPHOTOS = "relevance";
+
+    public static final String URL = "url";
 
     @BindView(R.id.fragment_photo_gallery_recycler_view)
     RecyclerView mPhotoRecyclerView;
@@ -85,23 +88,20 @@ public class PhotoGalleryFragment extends Fragment {
             hideProgressBar();
         }
 
-        mPhotoRecyclerView.setLayoutManager(new GridLayoutManager(getActivity(), 3));
-        mPhotoRecyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+        PreCachingLayoutManager preCachingLayoutManager = new PreCachingLayoutManager(getActivity().getApplicationContext(), 3,
+                PreCachingLayoutManager.VERTICAL, false);
+
+        mPhotoRecyclerView.setLayoutManager(preCachingLayoutManager);
+        mPhotoRecyclerView.addOnScrollListener(new EndlessRecyclerViewScrollListener(preCachingLayoutManager) {
             @Override
-            public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
-                super.onScrolled(recyclerView, dx, dy);
-                if(!recyclerView.canScrollVertically(1)) {
-                    updateItems();
-                }
+            public void onLoadMore(int current_page) {
+                updateItems();
             }
         });
-        mPhotoRecyclerView.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
-            @Override
-            public void onGlobalLayout() {
-                int numColumns = mPhotoRecyclerView.getWidth() / COL_WIDTH;
-                GridLayoutManager layoutManager = (GridLayoutManager)mPhotoRecyclerView.getLayoutManager();
-                layoutManager.setSpanCount(numColumns);
-            }
+        mPhotoRecyclerView.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
+            int numColumns = mPhotoRecyclerView.getWidth() / COL_WIDTH;
+            GridLayoutManager layoutManager = (GridLayoutManager)mPhotoRecyclerView.getLayoutManager();
+            layoutManager.setSpanCount(numColumns);
         });
         mPhotoRecyclerView.getRecycledViewPool().setMaxRecycledViews(0, 0);
 
@@ -143,21 +143,13 @@ public class PhotoGalleryFragment extends Fragment {
             }
         });
 
-        searchView.setOnQueryTextFocusChangeListener(new View.OnFocusChangeListener() {
-            @Override
-            public void onFocusChange(View view, boolean queryTextFocused) {
-                if(!queryTextFocused) {
-                    searchView.onActionViewCollapsed();
-                }
+        searchView.setOnQueryTextFocusChangeListener((view, queryTextFocused) -> {
+            if(!queryTextFocused) {
+                searchView.onActionViewCollapsed();
             }
         });
 
-        searchView.setOnSearchClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                searchView.setQuery(searchQuery, false);
-            }
-        });
+        searchView.setOnSearchClickListener(view -> searchView.setQuery(searchQuery, false));
     }
 
     @Override
@@ -194,7 +186,7 @@ public class PhotoGalleryFragment extends Fragment {
             retrofit.create(FetchRecentPhotos.class).fetch(API_KEY, FORMAT, NOJSONCALLBACK, SAFESEARCH, EXTRAS,
                     FETCH_RECENT_METHOD, lastFetchedPage).enqueue(new Callback<List<GalleryItem>>() {
                 @Override
-                public void onResponse(Call<List<GalleryItem>> call, Response<List<GalleryItem>> response) {
+                public void onResponse(@Nullable Call<List<GalleryItem>> call,@Nullable Response<List<GalleryItem>> response) {
                     if(lastFetchedPage > 1) {
                         int positionStart = items.size() + 1;
                         items.addAll(response.body());
@@ -254,8 +246,14 @@ public class PhotoGalleryFragment extends Fragment {
 
     private void setupAdapter() {
         if (isAdded()) {
-            mPhotoRecyclerView.setAdapter(new PhotoAdapter(items, getContext()));
+            mPhotoRecyclerView.setAdapter(new PhotoAdapter(items, getContext(), this));
         }
     }
 
+    @Override
+    public void onClick(String url) {
+        Intent intent = new Intent(getActivity(), FullImageActivity.class);
+        intent.putExtra(URL, url);
+        startActivity(intent);
+    }
 }

@@ -2,11 +2,10 @@ package com.maxim.yandexpreschooltask;
 
 import android.app.Application;
 
-import com.jakewharton.picasso.OkHttp3Downloader;
+import com.github.piasy.biv.BigImageViewer;
+import com.github.piasy.biv.loader.glide.GlideImageLoader;
 import com.squareup.leakcanary.LeakCanary;
 import com.squareup.leakcanary.RefWatcher;
-import com.squareup.picasso.LruCache;
-import com.squareup.picasso.Picasso;
 
 public class YandexPreSchoolApp extends Application {
 
@@ -32,14 +31,6 @@ public class YandexPreSchoolApp extends Application {
         instance = (YandexPreSchoolApp) getApplicationContext();
         refWatcher = LeakCanary.install(this);
 
-        Picasso.Builder builder = new Picasso.Builder(this);
-        builder.downloader(new OkHttp3Downloader(this,Integer.MAX_VALUE));
-        Picasso built = builder
-                .memoryCache(new LruCache(60000000))
-                .build();
-        built.setIndicatorsEnabled(true);
-        built.setLoggingEnabled(true);
-        Picasso.setSingletonInstance(built);
-
+        BigImageViewer.initialize(GlideImageLoader.with(this));
     }
 }

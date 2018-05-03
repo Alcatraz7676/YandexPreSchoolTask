@@ -28,14 +28,15 @@ public class PhotosApiResponseDeserializer
         for(int i = 0; i < jArray.size(); i++) {
             JsonObject jObject = (JsonObject) jArray.get(i);
             GalleryItem item = new GalleryItem();
-            if (jObject.get("url_n") == null) {
-                if (jObject.get("url_o") == null)
-                    continue;
-                else
-                    item.setUrl(jObject.get("url_o").getAsString());
-            } else
+
+            if (jObject.get("url_n") != null)
                 item.setUrl(jObject.get("url_n").getAsString());
-            item.setCaption(jObject.get("title").getAsString());
+
+            if (jObject.get("url_o") != null)
+                item.setBigImageUrl(jObject.get("url_o").getAsString());
+            else if (jObject.get("url_n") != null)
+                item.setBigImageUrl(jObject.get("url_n").getAsString());
+
             items.add(item);
         }
 

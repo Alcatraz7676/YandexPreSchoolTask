@@ -1,18 +1,14 @@
 package com.maxim.yandexpreschooltask;
 
 import android.content.Context;
-import android.graphics.Bitmap;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 
+import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions;
 import com.maxim.yandexpreschooltask.entities.GalleryItem;
-import com.squareup.picasso.Callback;
-import com.squareup.picasso.NetworkPolicy;
-import com.squareup.picasso.Picasso;
-import com.squareup.picasso.Transformation;
 
 import java.util.List;
 
@@ -21,12 +17,14 @@ import butterknife.ButterKnife;
 
 public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.PhotoHolder> {
 
-    private List<GalleryItem> mGalleryItems;
+    private List<GalleryItem> items;
     private Context context;
+    private OnPhotoClickListener listener;
 
-    public PhotoAdapter(List<GalleryItem> items, Context context) {
-        mGalleryItems = items;
+    public PhotoAdapter(List<GalleryItem> items, Context context, OnPhotoClickListener listener) {
+        this.items = items;
         this.context = context;
+        this.listener = listener;
     }
 
     @Override
@@ -38,7 +36,7 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.PhotoHolder>
 
     @Override
     public void onBindViewHolder(PhotoHolder photoHolder, int position) {
-        GalleryItem galleryItem = mGalleryItems.get(position);
+        GalleryItem galleryItem = items.get(position);
         photoHolder.bindGalleryItem(galleryItem);
     }
 
@@ -54,74 +52,42 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.PhotoHolder>
 
     @Override
     public int getItemCount() {
-        return mGalleryItems.size();
+        return items.size();
     }
 
     public class PhotoHolder extends RecyclerView.ViewHolder {
 
         @BindView(R.id.fragment_photo_gallery_image_view)
-        ImageView mItemImageView;
+        ImageView itemImageView;
+
+        View itemView;
 
         public PhotoHolder(View itemView) {
             super(itemView);
             ButterKnife.bind(this, itemView);
+            this.itemView = itemView;
         }
 
         public void bindGalleryItem(final GalleryItem galleryItem) {
-            Picasso.with(context)
-                    .load(galleryItem.getUrl())
-                    .transform(new Transformation() {
-                        @Override
-                        public Bitmap transform(Bitmap source) {
-                            int size = Math.min(source.getWidth(), source.getHeight());
-                            int x = (source.getWidth() - size) / 2;
-                            int y = (source.getHeight() - size) / 2;
-                            Bitmap result = Bitmap.createBitmap(source, x, y, size, size);
-                            if (result != source) {
-                                source.recycle();
-                            }
-                            return result;
-                        }
 
-                        @Override
-                        public String key() {
-                            return "square()";
-                        }
-                    })
+            String url;
+
+            if (galleryItem.getUrl() != null)
+                url = galleryItem.getUrl();
+            else if (galleryItem.getBigImageUrl() != null)
+                url = galleryItem.getBigImageUrl();
+            else
+                return;
+
+            GlideApp.with(context)
+                    .load(url)
                     .placeholder(R.drawable.placeholder)
-                    .networkPolicy(NetworkPolicy.OFFLINE)
-                    .into(mItemImageView, new Callback() {
-                        @Override
-                        public void onSuccess() {
-                        }
+                    .fitCenter()
+                    .transition(DrawableTransitionOptions.withCrossFade())
+                    .into(itemImageView);
 
-                        @Override
-                        public void onError() {
-                            //Try again online if cache failed
-                            Picasso.with(context)
-                                    .load(galleryItem.getUrl())
-                                    .transform(new Transformation() {
-                                        @Override
-                                        public Bitmap transform(Bitmap source) {
-                                            int size = Math.min(source.getWidth(), source.getHeight());
-                                            int x = (source.getWidth() - size) / 2;
-                                            int y = (source.getHeight() - size) / 2;
-                                            Bitmap result = Bitmap.createBitmap(source, x, y, size, size);
-                                            if (result != source) {
-                                                source.recycle();
-                                            }
-                                            return result;
-                                        }
+            itemView.setOnClickListener( itemView -> listener.onClick(galleryItem.getBigImageUrl()) );
 
-                                        @Override
-                                        public String key() {
-                                            return "square()";
-                                        }
-                                    })
-                                    .placeholder(R.drawable.placeholder)
-                                    .into(mItemImageView);
-                        }
-                    });
         }
     }
 }

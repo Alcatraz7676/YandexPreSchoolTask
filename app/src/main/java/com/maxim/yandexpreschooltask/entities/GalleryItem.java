@@ -1,53 +1,22 @@
 package com.maxim.yandexpreschooltask.entities;
 
 public class GalleryItem {
-    private String mCaption;
-    private String mUrl;
-    /*
-    private String mId;
-    public String mOwner;
-    */
-
-    public void setCaption(String caption) {
-        mCaption = caption;
-    }
+    private String url;
+    private String bigImageUrl;
 
     public String getUrl() {
-        return mUrl;
+        return url;
     }
 
     public void setUrl(String url) {
-        mUrl = url;
+        this.url = url;
     }
 
-    /*
-    public String getId() {
-        return mId;
+    public String getBigImageUrl() {
+        return bigImageUrl;
     }
 
-    public void setId(String id) {
-        mId = id;
-    }
-
-    public String getOwner() {
-        return mOwner;
-    }
-
-    public void setOwner(String owner) {
-        mOwner = owner;
-    }
-
-    public Uri getPhotoPageUri() {
-        return Uri.parse("http://www.flickr.com/photos/")
-                .buildUpon()
-                .appendPath(mOwner)
-                .appendPath(mId)
-                .build();
-    }
-    */
-
-    @Override
-    public String toString() {
-        return mCaption;
+    public void setBigImageUrl(String bigImageUrl) {
+        this.bigImageUrl = bigImageUrl;
     }
 }
