@@ -1,13 +1,15 @@
 package com.maxim.yandexpreschooltask;
 
+import android.content.Context;
 import android.content.Intent;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.SearchView;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -15,6 +17,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ProgressBar;
+import android.widget.RelativeLayout;
 import android.widget.Toast;
 
 import com.google.gson.Gson;
@@ -32,6 +35,7 @@ import java.util.List;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
+import butterknife.OnClick;
 import butterknife.Unbinder;
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -41,40 +45,47 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 public class PhotoGalleryFragment extends Fragment implements OnPhotoClickListener{
 
-    private static final String TAG = "mytaglol";
-
+    // Ключ доступа
     private static final String API_KEY = "c8d1f3b8ba6bc609d41e3d23da4078bb";
+    // Метод для получения последних картинок
     private static final String FETCH_RECENT_METHOD = "flickr.photos.getRecent";
+    // Метод для поиска картинок по заданному имени
     private static final String SEARCH_METHOD = "flickr.photos.search";
+    // Формат в котором возвращается ответ с сервера
     private static final String FORMAT = "json";
+    // Получение чистого json
     private static final int NOJSONCALLBACK = 1;
+    // Для безопасного поиска (не особо работает если честно)
     private static final int SAFESEARCH = 1;
+    // Какого размера картинки получаем (url_n - 320x320, url_o - изначальный размер)
     private static final String EXTRAS = "url_n,url_o";
+    // То как сортируются найденные картинки. В нашем случае по релевантности.
     private static final String SORTPHOTOS = "relevance";
+    // То, сколько картинок возвращается при каждом запросе.
+    private static final int PERPAGE = 50;
 
     public static final String URL = "url";
 
     @BindView(R.id.fragment_photo_gallery_recycler_view)
-    RecyclerView mPhotoRecyclerView;
+    RecyclerView photoRecyclerView;
     @BindView(R.id.fragment_progress_bar)
-    ProgressBar mProgressBar;
+    ProgressBar progressBar;
+    @BindView(R.id.disconnected_view)
+    RelativeLayout disconnectedView;
 
     private Unbinder unbinder;
+    // То какую страницу нам нужно получить, увеличивается на 1 при скролле и сбрасывается обратно при новом поиске.
     private int lastFetchedPage = 1;
+    // Ширина 1 колонки
     private static final int COL_WIDTH = 300;
+    // Поле хранящее, введенное пользователем слово, по которому потом идет поиск
     private String searchQuery = null;
+    // Элементы хранятся во фрагменте, для того чтобы они оставались после пересоздании
+    // активити(поворот экрана).
     private List<GalleryItem> items = new ArrayList<>();
 
     public static PhotoGalleryFragment newInstance() {
         return new PhotoGalleryFragment();
-    }
-
-    @Override
-    public void onCreate(@Nullable Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setRetainInstance(true);
-        setHasOptionsMenu(true);
-        updateItems();
     }
 
     @Nullable
@@ -84,31 +95,40 @@ public class PhotoGalleryFragment extends Fragment implements OnPhotoClickListen
         View v = inflater.inflate(R.layout.fragment_photo_gallery, container, false);
         unbinder = ButterKnife.bind(this, v);
 
-        if(savedInstanceState != null) {
+        if (savedInstanceState != null) {
             hideProgressBar();
         }
 
-        PreCachingLayoutManager preCachingLayoutManager = new PreCachingLayoutManager(getActivity().getApplicationContext(), 3,
-                PreCachingLayoutManager.VERTICAL, false);
+        PreCachingGridLayoutManager preCachingGridLayoutManager = new PreCachingGridLayoutManager(
+                getActivity().getApplicationContext(), 3,
+                PreCachingGridLayoutManager.VERTICAL, false
+        );
 
-        mPhotoRecyclerView.setLayoutManager(preCachingLayoutManager);
-        mPhotoRecyclerView.addOnScrollListener(new EndlessRecyclerViewScrollListener(preCachingLayoutManager) {
+        photoRecyclerView.setLayoutManager(preCachingGridLayoutManager);
+        photoRecyclerView.addOnScrollListener(new EndlessRecyclerViewScrollListener(preCachingGridLayoutManager) {
             @Override
             public void onLoadMore(int current_page) {
                 updateItems();
             }
         });
-        mPhotoRecyclerView.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
-            int numColumns = mPhotoRecyclerView.getWidth() / COL_WIDTH;
-            GridLayoutManager layoutManager = (GridLayoutManager)mPhotoRecyclerView.getLayoutManager();
+        photoRecyclerView.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
+            int numColumns = photoRecyclerView.getWidth() / COL_WIDTH;
+            GridLayoutManager layoutManager = (GridLayoutManager) photoRecyclerView.getLayoutManager();
             layoutManager.setSpanCount(numColumns);
         });
-        mPhotoRecyclerView.getRecycledViewPool().setMaxRecycledViews(0, 0);
 
         if (!items.isEmpty())
             setupAdapter();
 
         return v;
+    }
+
+    @Override
+    public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+        setRetainInstance(true);
+        setHasOptionsMenu(true);
+        showPhotosIfOnline();
     }
 
     @Override public void onDestroyView() {
@@ -127,7 +147,6 @@ public class PhotoGalleryFragment extends Fragment implements OnPhotoClickListen
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String query) {
-                Log.d(TAG, "QueryTextSubmit: " + query);
                 searchQuery = query;
                 lastFetchedPage = 1;
                 searchView.onActionViewCollapsed();
@@ -138,7 +157,6 @@ public class PhotoGalleryFragment extends Fragment implements OnPhotoClickListen
 
             @Override
             public boolean onQueryTextChange(String newText) {
-                Log.d(TAG, "QueryTextChange: " + newText);
                 return true;
             }
         });
@@ -181,21 +199,20 @@ public class PhotoGalleryFragment extends Fragment implements OnPhotoClickListen
                 .addConverterFactory(GsonConverterFactory.create(gson))
                 .build();
 
-        Log.i(TAG, String.valueOf(lastFetchedPage));
         if (searchQuery == null || searchQuery.trim().equals("")) {
             retrofit.create(FetchRecentPhotos.class).fetch(API_KEY, FORMAT, NOJSONCALLBACK, SAFESEARCH, EXTRAS,
-                    FETCH_RECENT_METHOD, lastFetchedPage).enqueue(new Callback<List<GalleryItem>>() {
+                    FETCH_RECENT_METHOD, lastFetchedPage, PERPAGE).enqueue(new Callback<List<GalleryItem>>() {
                 @Override
                 public void onResponse(@Nullable Call<List<GalleryItem>> call,@Nullable Response<List<GalleryItem>> response) {
                     if(lastFetchedPage > 1) {
                         int positionStart = items.size() + 1;
                         items.addAll(response.body());
                         if (items.size() - positionStart - 1 > 0)
-                            mPhotoRecyclerView.getAdapter().notifyItemRangeInserted(positionStart, items.size());
+                            photoRecyclerView.getAdapter().notifyItemRangeInserted(positionStart, items.size());
                     } else {
                         items = response.body();
                         setupAdapter();
-                        if(mProgressBar != null) {
+                        if(progressBar != null) {
                             hideProgressBar();
                         }
                     }
@@ -209,18 +226,18 @@ public class PhotoGalleryFragment extends Fragment implements OnPhotoClickListen
             });
         } else {
             retrofit.create(SearchPhotos.class).search(API_KEY, FORMAT, NOJSONCALLBACK, SAFESEARCH, EXTRAS,
-                    SEARCH_METHOD, lastFetchedPage, SORTPHOTOS, searchQuery.trim()).enqueue(new Callback<List<GalleryItem>>() {
+                    SEARCH_METHOD, lastFetchedPage, PERPAGE, SORTPHOTOS, searchQuery.trim()).enqueue(new Callback<List<GalleryItem>>() {
                 @Override
                 public void onResponse(Call<List<GalleryItem>> call, Response<List<GalleryItem>> response) {
                     if(lastFetchedPage > 1) {
                         int positionStart = items.size() + 1;
                         items.addAll(response.body());
                         if (items.size() - positionStart - 1 > 0)
-                            mPhotoRecyclerView.getAdapter().notifyItemRangeInserted(positionStart, items.size());
+                            photoRecyclerView.getAdapter().notifyItemRangeInserted(positionStart, items.size());
                     } else {
                         items = response.body();
                         setupAdapter();
-                        if(mProgressBar != null) {
+                        if(progressBar != null) {
                             hideProgressBar();
                         }
                     }
@@ -235,19 +252,45 @@ public class PhotoGalleryFragment extends Fragment implements OnPhotoClickListen
     }
 
     private void showProgrssBar() {
-        mProgressBar.setVisibility(View.VISIBLE);
-        mPhotoRecyclerView.setVisibility(View.GONE);
+        progressBar.setVisibility(View.VISIBLE);
+        photoRecyclerView.setVisibility(View.GONE);
     }
 
     private void hideProgressBar() {
-        mProgressBar.setVisibility(View.GONE);
-        mPhotoRecyclerView.setVisibility(View.VISIBLE);
+        progressBar.setVisibility(View.GONE);
+        photoRecyclerView.setVisibility(View.VISIBLE);
+        disconnectedView.setVisibility(View.GONE);
     }
 
     private void setupAdapter() {
         if (isAdded()) {
-            mPhotoRecyclerView.setAdapter(new PhotoAdapter(items, getContext(), this));
+            photoRecyclerView.setAdapter(new PhotoAdapter(items, getActivity(), this));
         }
+    }
+
+    private void showPhotosIfOnline() {
+        if (isOnline()) {
+            updateItems();
+        } else {
+            showDisconnectedView();
+        }
+    }
+
+    private boolean isOnline() {
+        ConnectivityManager cm =
+                (ConnectivityManager) getActivity().getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo netInfo = cm.getActiveNetworkInfo();
+        return netInfo != null && netInfo.isConnected();
+    }
+
+    private void showDisconnectedView() {
+        disconnectedView.setVisibility(View.VISIBLE);
+        progressBar.setVisibility(View.GONE);
+    }
+
+    @OnClick(R.id.disconnected_button)
+    public void onViewClicked(View view) {
+        showPhotosIfOnline();
     }
 
     @Override

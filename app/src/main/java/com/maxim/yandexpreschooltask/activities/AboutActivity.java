@@ -31,6 +31,7 @@ public class AboutActivity extends AppCompatActivity {
                 .into(authorImageView);
     }
 
+    // Переопределяем кнопку назад для того чтобы при возвращении не пересоздавалась активити
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {

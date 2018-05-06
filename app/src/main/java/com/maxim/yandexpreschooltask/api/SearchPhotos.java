@@ -17,6 +17,7 @@ public interface SearchPhotos {
                                    @Query("extras") String extras,
                                    @Query("method") String methodName,
                                    @Query("page") int pageNum,
+                                   @Query("per_page") int perPage,
                                    @Query("sort") String sort,
                                    @Query("text") String text);
 }

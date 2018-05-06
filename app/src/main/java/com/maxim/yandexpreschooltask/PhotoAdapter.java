@@ -1,12 +1,14 @@
 package com.maxim.yandexpreschooltask;
 
 import android.content.Context;
+import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 
+import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions;
 import com.maxim.yandexpreschooltask.entities.GalleryItem;
 
@@ -38,6 +40,13 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.PhotoHolder>
     public void onBindViewHolder(PhotoHolder photoHolder, int position) {
         GalleryItem galleryItem = items.get(position);
         photoHolder.bindGalleryItem(galleryItem);
+    }
+
+    @Override
+    public void onViewRecycled(@NonNull PhotoHolder holder) {
+        super.onViewRecycled(holder);
+        // Без этой строки происходит OOME ¯\_(ツ)_/¯
+        Glide.with(context).clear(holder.itemImageView);
     }
 
     @Override
@@ -82,7 +91,7 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.PhotoHolder>
             GlideApp.with(context)
                     .load(url)
                     .placeholder(R.drawable.placeholder)
-                    .fitCenter()
+                    .centerCrop()
                     .transition(DrawableTransitionOptions.withCrossFade())
                     .into(itemImageView);
 

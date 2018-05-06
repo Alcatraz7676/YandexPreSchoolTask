@@ -6,4 +6,7 @@
     <string name="about_author">Made by Maxim Ovchinnikov</string>
     <string name="contact_me">You can contact me at:</string>
     <string name="email" translatable="false">maxim.ovchinnikov97@gmail.com</string>
+    <string name="disconnected_title_text">Connection is lost</string>
+    <string name="disconnected_subtitle_text">Click the button to try again</string>
+    <string name="disconnected_button_text">RETRY</string>
 </resources>

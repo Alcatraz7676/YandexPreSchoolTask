@@ -1,5 +1,7 @@
 package com.maxim.yandexpreschooltask;
 
+import android.util.Log;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
@@ -25,12 +27,16 @@ public class PhotosApiResponseDeserializer
 
         JsonArray jArray = json.getAsJsonObject().getAsJsonObject("photos").getAsJsonArray("photo");
 
+        Log.i("test", jArray.toString());
+
         for(int i = 0; i < jArray.size(); i++) {
             JsonObject jObject = (JsonObject) jArray.get(i);
             GalleryItem item = new GalleryItem();
 
             if (jObject.get("url_n") != null)
                 item.setUrl(jObject.get("url_n").getAsString());
+            else
+                continue;
 
             if (jObject.get("url_o") != null)
                 item.setBigImageUrl(jObject.get("url_o").getAsString());

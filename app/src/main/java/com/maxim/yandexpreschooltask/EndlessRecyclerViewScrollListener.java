@@ -7,9 +7,9 @@ import android.support.v7.widget.RecyclerView;
 public abstract class EndlessRecyclerViewScrollListener extends RecyclerView.OnScrollListener {
 
     int firstVisibleItem, visibleItemCount, totalItemCount;
-    private int previousTotal = 0; // The total number of items in the dataset after the last load
-    private boolean loading = true; // True if we are still waiting for the last set of data to load.
-    private int visibleThreshold = 18; // The minimum amount of items to have below your current scroll position before loading more.
+    private int previousTotal = 0; // Общее число элементов в наборе данных после последней загрузки
+    private boolean loading = true; // true если идет загрузка
+    private int visibleThreshold = 18; // Минимальное количество элементов, которое должно быть под текущей позицией скролла, для того чтобы начать загрузку
     private int current_page = 0;
 
     private GridLayoutManager gridLayoutManager;
@@ -34,9 +34,8 @@ public abstract class EndlessRecyclerViewScrollListener extends RecyclerView.OnS
         }
         if (!loading && (totalItemCount - visibleItemCount)
                 <= (firstVisibleItem + visibleThreshold)) {
-            // End has been reached
+            // Достигнут конец
 
-            // Do something
             current_page++;
 
             onLoadMore(current_page);

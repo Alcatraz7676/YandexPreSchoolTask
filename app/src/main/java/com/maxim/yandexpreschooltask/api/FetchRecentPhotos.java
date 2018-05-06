@@ -16,5 +16,6 @@ public interface FetchRecentPhotos {
                                   @Query("safe_search") int safeSearch,
                                   @Query("extras") String extras,
                                   @Query("method") String methodName,
-                                  @Query("page") int pageNum);
+                                  @Query("page") int pageNum,
+                                  @Query("per_page") int perPage);
 }

@@ -5,11 +5,13 @@ import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
 
 
-public class PreCachingLayoutManager extends GridLayoutManager {
+// Данный класс расширяет наш Layout на дополнительые 300 пикселей, тем самым glide загружает те
+// элементы которые мы еще не видим.
+public class PreCachingGridLayoutManager extends GridLayoutManager {
     private static final int DEFAULT_EXTRA_LAYOUT_SPACE = 300;
     private int extraLayoutSpace = -1;
 
-    public PreCachingLayoutManager(Context context, int spanCount, int orientation, boolean reverseLayout) {
+    public PreCachingGridLayoutManager(Context context, int spanCount, int orientation, boolean reverseLayout) {
         super(context, spanCount, orientation, reverseLayout);
     }
 
